@@ -142,23 +142,29 @@ def scan_dir(scan_path, scan_level):
                 key_name = root_subdir_name + "-level" + str(level_flag + 1) + '-' + item
                 dir_info_dict[key_name] = "size:%s mtime:%s" % (dir_size_str, mtime)
 
-        if os.path.isdir(item_full) and scan_level > 0:  # recursively scan next level dir
-            scan_dir(item_full, scan_level - 1)
+    #     if os.path.isdir(item_full) and scan_level > 0:  # recursively scan next level dir
+    #         scan_dir(item_full, scan_level - 1)
     size_str = size_transform(size)
     print("Current dir %s size is: %s" % (scan_path, size_str))
 
     # store the base scan dir info into dict
     if level_flag == 0:
-        base_dir_size_str = size_transform(size)
+        # base_dir_size_str = size_transform(size)
+        base_dir_size_str = size_str
         key_name = os.path.basename(scan_path)
-        base_dir_atime = os.path.getatime(scan_path)  # get last access time
-        base_dir_mtime = os.path.getmtime(scan_path)  # get last modification time
-        base_dir_ctime = os.path.getctime(scan_path)  # get creation time for Windows, last metadata change time for Linux
+        base_dir_atime = os.path.getatime(scan_path)
+        base_dir_mtime = os.path.getmtime(scan_path)
+        base_dir_ctime = os.path.getctime(scan_path)
         access_time = strftime("%Y/%m/%d %H:%M:%S", localtime(base_dir_atime))
         modification_time = strftime("%Y/%m/%d %H:%M:%S", localtime(base_dir_mtime))
         creation_time = strftime("%Y/%m/%d %H:%M:%S", localtime(base_dir_ctime))
         dir_info_dict[key_name] = "size:%s mtime:%s" % (base_dir_size_str, modification_time)
 
+    # According to scan_level to decide whether need to scan deeper
+    for item in os.listdir(scan_path):
+        item_full = os.path.join(scan_path, item)
+        if os.path.isdir(item_full) and scan_level > 0:  # recursively scan next level dir
+            scan_dir(item_full, scan_level - 1)
 
 
 if __name__ == "__main__":
