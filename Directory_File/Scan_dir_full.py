@@ -5,8 +5,9 @@
 # Author    : LinXpy
 # Time      : 2018/12/21 21:29
 # Function Description :
-# Search the specified whole directory, calculate and list each
-# directory and file size.
+# 1) Scan the specified whole directory, calculate each subdir and
+# file size, list all the subdir and files in it;
+# 2) visualize/print the whole directory tree;
 # =================================================================
 
 import os
@@ -90,6 +91,12 @@ dir_info_dict = {}      # store the info(size, mtime) of dirs in each scan dir
 file_info_dict = {}     # store the info(size, mtime) of files in each scan dir
 
 def scan_dir(scan_path, scan_level):
+    """
+    Description: 
+        list the dirs & files in the scan dir of each scan level;
+        calculate the size of dirs & files in the scan dirl
+        store the scan dirs & files info into dict(info: size, modification time);
+    """
     size = 0                        # size of current scan dir scan_path
     print("Dir scan path: %s" % scan_path)
     path_list = scan_path.split('\\')
@@ -110,7 +117,7 @@ def scan_dir(scan_path, scan_level):
         dir_list_dict[key_name] = dir_file_list
     else:
         root_subdir_name = path_list[base_path_len]
-        key_name = root_subdir_name + "-level" + str(level_flag)    # construct special key_name with root subdir
+        key_name = root_subdir_name + "@level" + str(level_flag - 1) + '@' + path_list[-1]    # construct special key_name with root subdir
         dir_list_dict[key_name] = dir_file_list
 
     # calculate the size of directory scan_path
@@ -128,7 +135,7 @@ def scan_dir(scan_path, scan_level):
             else:
                 file_size_str = size_transform(item_size)
                 root_subdir_name = path_list[base_path_len]  # list index is 0 base
-                key_name = root_subdir_name + "-level" + str(level_flag) + '-' + item
+                key_name = root_subdir_name + "@level" + str(level_flag) + '@' + item
                 file_info_dict[key_name] = "size:%s mtime:%s" % (file_size_str, mtime)
         # if dir, store dir info into dict later in outside of for cycle
         if os.path.isdir(item_full):
@@ -139,7 +146,7 @@ def scan_dir(scan_path, scan_level):
             else:
                 dir_size_str = size_transform(item_size)
                 root_subdir_name = path_list[base_path_len]
-                key_name = root_subdir_name + "-level" + str(level_flag + 1) + '-' + item
+                key_name = root_subdir_name + "@level" + str(level_flag) + '@' + item
                 dir_info_dict[key_name] = "size:%s mtime:%s" % (dir_size_str, mtime)
 
     #     if os.path.isdir(item_full) and scan_level > 0:  # recursively scan next level dir
@@ -166,9 +173,59 @@ def scan_dir(scan_path, scan_level):
         if os.path.isdir(item_full) and scan_level > 0:  # recursively scan next level dir
             scan_dir(item_full, scan_level - 1)
 
+def create_show_dir_tree(scan_path, scan_level):
+    """
+    Description: create and print the whole dir tree
+    """
+    node_icon = {"BRANCH": '├─',
+                 "LAST_BRANCH": '└─',
+                 "TAB": '│  ',
+                 "EMPTY_TAB": '   '}
+    # BRANCH = '├─'
+    # LAST_BRANCH = '└─'
+    # TAB = '│  '
+    # EMPTY_TAB = '   '
+
+    level_flag = 0
+    base_dir_name = os.path.basename(scan_path)     # root dir name of scan_path
+    root_node = base_dir_name
+    print(root_node)
+    for item in dir_list_dict[base_dir_name]:   # item: root subdir name or file name, level 0
+        if item not in dir_info_dict.keys():  # a file
+            root_subfile_node = node_icon["LAST_BRANCH"] + item
+            root_subfile_info = file_info_dict[item]
+            print(root_subfile_node)
+        else:
+            root_subdir_node = node_icon["BRANCH"] + item
+            root_subdir_info = dir_info_dict[item]
+            print(root_subdir_node)
+            level_flag += 1
+            parse_dict_create_tree(level_flag, item, item, node_icon)   # for root subdir, key_name==root_subdir_name
+            level_flag = 0
+
+def parse_dict_create_tree(level_flag, key_name, root_subdir_name, node_icon):
+    """
+    Description: recursively create and print subdir tree
+    key_name: the specially constructed name for subdir, files
+    root_subdir_name: the subdir & file name in root scan dir, use to construct the key_name
+    """
+    if level_flag <= scan_level and len(dir_list_dict[key_name]) > 0:   # dir key_name not empty
+        for sub_item in dir_list_dict[key_name]:
+            key_name = root_subdir_name + "@level" + str(level_flag) + '@' + sub_item   # construct special key for subdir/file
+            if key_name not in dir_info_dict.keys():  # a file
+                level_subfile_node = node_icon["TAB"] * level_flag + node_icon["LAST_BRANCH"] + sub_item
+                level_subfile_info = file_info_dict[key_name]
+                print(level_subfile_node)
+            else:   # a dir
+                level_subdir_node = node_icon["TAB"] * level_flag + node_icon["BRANCH"] + sub_item
+                level_subdir_info = dir_info_dict[key_name]
+                print(level_subdir_node)
+                parse_dict_create_tree(level_flag + 1, key_name, root_subdir_name, node_icon)
+
 
 if __name__ == "__main__":
     scan_dir(scan_path, scan_level)
     print(dir_list_dict)
     print(file_info_dict)
     print(dir_info_dict)
+    create_show_dir_tree(scan_path, scan_level)
